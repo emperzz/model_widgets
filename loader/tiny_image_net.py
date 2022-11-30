@@ -2,7 +2,11 @@ from torch.utils.data import DataLoader
 from torchvision.datasets.folder import default_loader
 from torchvision.datasets.vision import VisionDataset
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
+import torchvision.transforms as transforms
 import os
+
+def _adjust_entry_name(name):
+    return name[2:] if '._' in name else name
 
 class TinyImageNetFolder(VisionDataset):
     def __init__(
@@ -50,7 +54,7 @@ class TinyImageNetFolder(VisionDataset):
         directory = os.path.expanduser(directory)
 
         if class_to_idx is None:
-            _, class_to_idx = find_classes(directory)
+            _, class_to_idx = self.find_classes(directory)
         elif not class_to_idx:
             raise ValueError("'class_to_index' must have at least one entry to collect any samples.")
 
@@ -85,7 +89,7 @@ class TinyImageNetFolder(VisionDataset):
                 continue
             for root, _, fnames in sorted(os.walk(target_dir, followlinks=True)):
                 for fname in sorted(fnames):
-                    path = os.path.join(root, fname)
+                    path = os.path.join(root, _adjust_entry_name(fname))
                     if is_valid_file(path):
                         item = path, class_index
                         instances.append(item)
@@ -118,7 +122,7 @@ class TinyImageNetFolder(VisionDataset):
         for entry in os.scandir(target_dir):
             path = os.path.join(target_dir, entry.name)
             if is_valid_file(path):
-                target_class = val_ann[entry.name]
+                target_class = val_ann[_adjust_entry_name(entry.name)]
                 item = path, class_to_idx[target_class]
                 instances.append(item)
                 
@@ -150,3 +154,32 @@ class TinyImageNetFolder(VisionDataset):
         return len(self.samples)
 
 
+def get_tiny_imagenet_dataloader(
+    root, 
+    batch_size, 
+    num_workers = 0,
+    transform = transforms.Compose([transforms.Resize(64),
+                                    transforms.ToTensor()]),
+    target_transform = None):
+    train_iter =\
+        DataLoader(
+            TinyImageNetFolder(root, train = True,
+                transform = transform, target_transform= target_transform),
+                batch_size=batch_size,
+                num_workers=num_workers,
+                shuffle=True)
+    
+    test_iter =\
+        DataLoader(
+            TinyImageNetFolder(root, train = False,
+                transform = transform, target_transform= target_transform),
+                batch_size=batch_size,
+                num_workers=num_workers)
+
+    return train_iter, test_iter
+
+if __name__ == '__main__':
+    train_iter, test_iter = get_tiny_imagenet_dataloader('E:/Data/tiny-imagenet-200', batch_size = 128, num_workers = 10)
+    for x, y in train_iter:
+        print(x.shape, y.shape)
+        break
