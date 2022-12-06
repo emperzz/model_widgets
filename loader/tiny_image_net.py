@@ -158,7 +158,7 @@ def get_tiny_imagenet_dataloader(
     root, 
     batch_size, 
     num_workers = 0,
-    transform = transforms.Compose([transforms.Resize(64),
+    transform = transforms.Compose([transforms.Resize(224),
                                     transforms.ToTensor()]),
     target_transform = None):
     train_iter =\
