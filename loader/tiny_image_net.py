@@ -1,4 +1,5 @@
 from torch.utils.data import DataLoader
+import numpy as np
 from torchvision.datasets.folder import default_loader
 from torchvision.datasets.vision import VisionDataset
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
@@ -6,7 +7,7 @@ import torchvision.transforms as transforms
 import os
 
 def _adjust_entry_name(name):
-    return name[2:] if '._' in name else name
+    return name[2:] if '._' == name[:2] else name
 
 class TinyImageNetFolder(VisionDataset):
     def __init__(
@@ -38,6 +39,19 @@ class TinyImageNetFolder(VisionDataset):
             class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
         return classes, class_to_idx
         
+    @staticmethod
+    def class_to_boxes(root, class_name = None):
+        if class_name is None:
+            class_name = 'val_annotations.txt'
+        
+        with open(os.path.join(root, class_name), 'r') as fo:
+            data = fo.readlines()
+            
+        return {
+            c.split('\t')[0] : list(map(lambda x : int(x), c.split('\t')[-4:]))
+            for c in data
+        }
+
     def make_dataset(
         self,
         directory: str,
@@ -90,8 +104,12 @@ class TinyImageNetFolder(VisionDataset):
             for root, _, fnames in sorted(os.walk(target_dir, followlinks=True)):
                 for fname in sorted(fnames):
                     path = os.path.join(root, _adjust_entry_name(fname))
+                    if 'boxes' in fname:
+                        class_to_boxes = self.class_to_boxes(root, fname)
+
                     if is_valid_file(path):
-                        item = path, class_index
+                        # 先转化为array，list在dataloader会输出成len([...tensor(batch_size) ...]) = 4(框的四角)
+                        item = path, (class_index, np.array(class_to_boxes[fname])) 
                         instances.append(item)
 
                         if target_class not in available_classes:
@@ -117,13 +135,14 @@ class TinyImageNetFolder(VisionDataset):
         
         with open(os.path.join(directory, 'val', 'val_annotations.txt'), 'r') as fo:
             val_ann ={c.split('\t')[0]:c.split('\t')[1] for c in fo.readlines()}
-            
+        class_to_boxes = self.class_to_boxes(os.path.join(directory, 'val'))
+
         target_dir = os.path.join(directory, 'val', 'images')
         for entry in os.scandir(target_dir):
             path = os.path.join(target_dir, entry.name)
             if is_valid_file(path):
                 target_class = val_ann[_adjust_entry_name(entry.name)]
-                item = path, class_to_idx[target_class]
+                item = path, (class_to_idx[target_class], np.array(class_to_boxes[entry.name]))
                 instances.append(item)
                 
                 if target_class not in available_classes:
