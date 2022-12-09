@@ -177,7 +177,7 @@ def get_tiny_imagenet_dataloader(
     root, 
     batch_size, 
     num_workers = 0,
-    transform = transforms.Compose([transforms.Resize(224),
+    transform = transforms.Compose([transforms.Resize(64),
                                     transforms.ToTensor()]),
     target_transform = None):
     train_iter =\
@@ -198,7 +198,7 @@ def get_tiny_imagenet_dataloader(
     return train_iter, test_iter
 
 if __name__ == '__main__':
-    train_iter, test_iter = get_tiny_imagenet_dataloader('E:/Data/tiny-imagenet-200', batch_size = 128, num_workers = 10)
+    train_iter, test_iter = get_tiny_imagenet_dataloader('E:/Data/tiny-imagenet-200', batch_size = 128, num_workers = 0)
     for x, y in train_iter:
         print(x.shape, y.shape)
         break
