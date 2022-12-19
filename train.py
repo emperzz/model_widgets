@@ -40,9 +40,12 @@ def train_epoch(net, optimizer, loss, train_iter, test_iter, num_epochs, logdir 
     num_batches = len(train_iter)
     with LogWriter(logdir = logdir) as writer:
         for epoch in range(num_epochs):
-            for x, (y, boxes) in train_iter:
+            for x, y in train_iter:
                 x = x.to(device)
                 y = y.to(device)
+
+                optimizer.zero_grad()
+
                 y_hat = net(x)
                 l = loss(y_hat, y)
                 l.backward()
@@ -81,15 +84,17 @@ class DataPipe:
 
 if __name__ == '__main__':
     from loader.tiny_image_net import get_tiny_imagenet_dataloader
+    from loader.cifar import get_cifar_dataloader
     from models.vgg import VGG
     import torch
     
     net = VGG((3, 64, 64),
               ((1, 64//4), (1, 128//4), (2, 256//4), (2, 512//4), (2, 512//4)),
               2048,
-              200)
-    train_iter, text_iter = get_tiny_imagenet_dataloader('/Users/yangxi/Downloads/tiny-imagenet-200', batch_size = 128)
-    optimizer = torch.optim.Adam(net.parameters(), lr = 0.01)
+              10)
+    # train_iter, test_iter = get_tiny_imagenet_dataloader('E:/Data/tiny-imagenet-200', batch_size = 256, num_workers=10)
+    train_iter, test_iter = get_cifar_dataloader('cifar10', 'E:/Data', batch_size = 256, num_workers=10)
+    optimizer = torch.optim.Adam(net.parameters(), lr = 0.05)
     loss = torch.nn.CrossEntropyLoss()
 
-    train_epoch(net, optimizer, loss, train_iter, text_iter, 10,None)#'/Users/yangxi/Project/log/model_widgets/test')
+    train_epoch(net, optimizer, loss, train_iter, test_iter, 10,None)#'/Users/yangxi/Project/log/model_widgets/test')
