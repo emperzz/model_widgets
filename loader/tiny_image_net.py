@@ -5,9 +5,12 @@ from torchvision.datasets.vision import VisionDataset
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
 import torchvision.transforms as transforms
 import os
+import sys
 
 def _adjust_entry_name(name):
-    return name[2:] if '._' == name[:2] else name
+    if sys.platform == 'win32':
+        return name[2:] if '._' == name[:2] else name
+    return name
 
 class TinyImageNetFolder(VisionDataset):
     def __init__(
@@ -18,6 +21,7 @@ class TinyImageNetFolder(VisionDataset):
         loader: Callable[[str], Any] = default_loader,
         is_valid_file: Optional[Callable[[str], bool]] = None,
         train:bool = True,
+        target_label:bool = True,
     ):
         super().__init__(root, transform=transform, target_transform=target_transform)
         classes, class_to_idx = self.find_classes(self.root)
@@ -25,6 +29,7 @@ class TinyImageNetFolder(VisionDataset):
 
         self.loader = loader
         self.extensions = (".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif", ".tiff", ".webp")
+        self.target_label = target_label
 
         self.classes = classes
         self.class_to_idx = class_to_idx
@@ -163,6 +168,10 @@ class TinyImageNetFolder(VisionDataset):
             tuple: (sample, target) where target is class_index of the target class.
         """
         path, target = self.samples[index]
+        if self.target_label:
+            target = target[0]
+        else:
+            target = target[1]
         sample = self.loader(path)
         if self.transform is not None:
             sample = self.transform(sample)

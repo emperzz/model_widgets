@@ -32,9 +32,14 @@ def train_epoch(net, optimizer, loss, train_iter, test_iter, num_epochs, logdir 
         dummy_input = next(iter(train_iter))[0]
         init_visualdl(logdir, os.path.join(logdir,'model.onnx'), net, dummy_input)
 
+    def init_weights(m):
+        if type(m) == torch.nn.Linear or type(m) == torch.nn.Conv2d:
+            torch.nn.init.xavier_uniform_(m.weight)
+    net.apply(init_weights)
 
-    net.train() 
     net.to(device)
+    net.train() 
+    
     
     n = 0
     num_batches = len(train_iter)
@@ -53,10 +58,10 @@ def train_epoch(net, optimizer, loss, train_iter, test_iter, num_epochs, logdir 
                 with torch.no_grad():
                     acc = evaluate_accuracy(y, y_hat)
                 if logdir:
-                    writer.add_scalar(tag = 'train/loss', value = l, step = n )
-                    writer.add_histogram(tag = 'train/hist', values = net.linear.weight.data.flatten(), step = n)
+                    writer.add_scalar(tag = 'train/loss', value = l.item(), step = n )
+                    writer.add_scalar(tag = 'train/acc', value = acc, step = n)
                 elif n % 100 ==0:
-                    print(f'loss {l:.3f}, acc: {acc}, step: {n}, 'f'epoch: {epoch}')
+                    print(f'loss {l:.3f}, acc: {acc:.3f}, step: {n}, 'f'epoch: {epoch}')
                 n += 1
             
 
@@ -87,14 +92,15 @@ if __name__ == '__main__':
     from loader.cifar import get_cifar_dataloader
     from models.vgg import VGG
     import torch
+    import d2l.torch as d2l
     
     net = VGG((3, 64, 64),
               ((1, 64//4), (1, 128//4), (2, 256//4), (2, 512//4), (2, 512//4)),
               2048,
-              10)
-    # train_iter, test_iter = get_tiny_imagenet_dataloader('E:/Data/tiny-imagenet-200', batch_size = 256, num_workers=10)
-    train_iter, test_iter = get_cifar_dataloader('cifar10', 'E:/Data', batch_size = 256, num_workers=10)
-    optimizer = torch.optim.Adam(net.parameters(), lr = 0.05)
+              200)
+    train_iter, test_iter = get_tiny_imagenet_dataloader('/Users/yangxi/Downloads/tiny-imagenet-200', batch_size = 256, num_workers=10)
+    # train_iter, test_iter = get_cifar_dataloader('cifar10', '/Users/yangxi/Project/dataset', batch_size = 256, num_workers=10)
+    optimizer = torch.optim.SGD(net.parameters(), lr = 0.05)
     loss = torch.nn.CrossEntropyLoss()
-
-    train_epoch(net, optimizer, loss, train_iter, test_iter, 10,None)#'/Users/yangxi/Project/log/model_widgets/test')
+    # d2l.train_ch6(net, train_iter, test_iter, 10, 0.05, 'cpu')
+    train_epoch(net, optimizer, loss, train_iter, test_iter, 20,'/Users/yangxi/Project/log/model_widgets/test')
