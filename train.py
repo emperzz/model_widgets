@@ -1,36 +1,16 @@
-from visualdl import LogWriter
-from visualdl.server import app
 from utils import evaluate_accuracy
 import torch
 import os
 
-def init_visualdl(logdir, model = None, net = None, dummy_input = None):
-    if model:
-        #检查模型文件是否存在
-        if not os.path.exists(model):
-            # 如果不存在，且输入了net，则必须输入dummy_input用以生成新的onnx文件
-            if net:
-                assert isinstance(net, torch.nn.Module)
-                assert dummy_input is not None
-                torch.onnx.export(net, dummy_input, model)
-    
-    app.run(logdir,
-            model=model,
-            host="127.0.0.1",
-            port=8040,
-            cache_timeout=20,
-            language=None,
-            public_path=None,
-            api_only=False,
-            open_browser=False)
 
-def train_epoch(net, optimizer, loss, train_iter, test_iter, num_epochs, logdir = None):
+
+def train_epoch(net, optimizer, loss, train_iter, test_iter, num_epochs, writer = None):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    if logdir:
-        dummy_input = next(iter(train_iter))[0]
-        init_visualdl(logdir, os.path.join(logdir,'model.onnx'), net, dummy_input)
+    # if logdir:
+    #     dummy_input = next(iter(train_iter))[0]
+    #     init_visualdl(logdir, os.path.join(logdir,'model.onnx'), net, dummy_input)
 
     def init_weights(m):
         if type(m) == torch.nn.Linear or type(m) == torch.nn.Conv2d:
@@ -40,29 +20,28 @@ def train_epoch(net, optimizer, loss, train_iter, test_iter, num_epochs, logdir 
     net.to(device)
     net.train() 
     
-    
     n = 0
     num_batches = len(train_iter)
-    with LogWriter(logdir = logdir) as writer:
-        for epoch in range(num_epochs):
-            for x, y in train_iter:
-                x = x.to(device)
-                y = y.to(device)
+    for epoch in range(num_epochs):
+        for x, y in train_iter:
+            x = x.to(device)
+            y = y.to(device)
 
-                optimizer.zero_grad()
+            optimizer.zero_grad()
 
-                y_hat = net(x)
-                l = loss(y_hat, y)
-                l.backward()
-                optimizer.step()
-                with torch.no_grad():
-                    acc = evaluate_accuracy(y, y_hat)
-                if logdir:
-                    writer.add_scalar(tag = 'train/loss', value = l.item(), step = n )
-                    writer.add_scalar(tag = 'train/acc', value = acc, step = n)
-                elif n % 100 ==0:
-                    print(f'loss {l:.3f}, acc: {acc:.3f}, step: {n}, 'f'epoch: {epoch}')
-                n += 1
+            y_hat = net(x)
+            l = loss(y_hat, y)
+            l.backward()
+            optimizer.step()
+            with torch.no_grad():
+                acc = evaluate_accuracy(y, y_hat)
+            if writer:
+                writer.add_scalar(tag = 'train/loss', value = l.item(), step = n )
+                writer.add_scalar(tag = 'train/acc', value = acc, step = n)
+            
+            if n % 100 ==0:
+                print(f'loss {l:.3f}, acc: {acc:.3f}, step: {n}, 'f'epoch: {epoch}')
+            n += 1
             
 
 class TrainPipe:

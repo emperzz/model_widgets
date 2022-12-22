@@ -193,16 +193,14 @@ def get_tiny_imagenet_dataloader(
     target_transform = None):
     train_iter =\
         DataLoader(
-            TinyImageNetFolder(root, train = True,
-                transform = transform, target_transform= target_transform),
+            TinyImageNetFolder(root, train = True, transform = transform, target_transform= target_transform),
                 batch_size=batch_size,
                 num_workers=num_workers,
                 shuffle=True)
     
     test_iter =\
         DataLoader(
-            TinyImageNetFolder(root, train = False,
-                transform = transform, target_transform= target_transform),
+            TinyImageNetFolder(root, train = False, transform = transform, target_transform= target_transform),
                 batch_size=batch_size,
                 num_workers=num_workers)
 

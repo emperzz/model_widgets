@@ -17,3 +17,9 @@ def get_cifar_dataloader(cifar, root, batch_size, num_workers):
 
     return (DataLoader(trainset, batch_size = batch_size, num_workers=num_workers, shuffle=True),
             DataLoader(testset, batch_size = batch_size, num_workers=num_workers, shuffle=False))
+
+def get_cifar10_dataloader(root, batch_size, num_workers):
+    return get_cifar_dataloader('cifar10', root, batch_size, num_workers)
+
+def get_cifar100_dataloader(root, batch_size, num_workers):
+    return get_cifar_dataloader('cifar100', root, batch_size, num_workers)
